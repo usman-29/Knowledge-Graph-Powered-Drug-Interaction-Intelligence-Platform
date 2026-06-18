@@ -1,0 +1,15 @@
+# Runtime data — never commit
+data/checkpoints.sqlite
+data/checkpoints.sqlite-shm
+data/checkpoints.sqlite-wal
+data/audit_logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.env
+
+# OS
+.DS_Store

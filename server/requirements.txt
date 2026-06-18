@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+neo4j
+python-dotenv
+pandas
+requests
+pydantic
+pydantic-settings
+bcrypt
+langchain-core
+langchain-openai
+langchain-huggingface
+langgraph
+langgraph-checkpoint-sqlite
+pytest
+pytest-asyncio

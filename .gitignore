@@ -1,0 +1,120 @@
+# ──────────────────────────────────────────────────────────────────────────────
+#  Autonomous Clinical Discharge & Care-Plan Orchestrator — root .gitignore
+#  Covers the three sub-projects: server (Python), client (Next.js), lobstertrap (Go)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Secrets & environment ─────────────────────────────────────────────────────
+# NEVER commit real credentials. Commit the *.example templates instead.
+.env
+.env.*
+**/.env
+**/.env.local
+**/.env.*.local
+*.pem
+*.key
+# ...but keep the templates (they hold only placeholders)
+!*.example
+!**/*.example
+
+# ── Operating system ──────────────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── Editors / IDEs ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Claude Code ───────────────────────────────────────────────────────────────
+.claude/
+**/.claude/
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Python  (server/)
+# ──────────────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+**/venv/
+**/.venv/
+
+# Test / coverage / type-checker caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Runtime data & generated artifacts  (server/data/)
+# ──────────────────────────────────────────────────────────────────────────────
+# Large, licensed, or machine-generated — must be regenerated locally, never committed.
+# (.gitignore does NOT support inline comments, so each pattern is on its own line.)
+# SNOMED CT, RxNorm RRF, drug-interaction CSVs (hundreds of MB, licensed):
+server/data/raw/
+# Derived / ingested artifacts:
+server/data/processed/
+# Append-only compliance traces (may contain query text):
+server/data/audit_logs/
+
+# SQLite — checkpoints & user store are runtime state
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+
+# Audit / log files
+*.log
+*.jsonl
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Node / Next.js  (client/)
+# ──────────────────────────────────────────────────────────────────────────────
+node_modules/
+**/node_modules/
+.next/
+out/
+.vercel/
+next-env.d.ts
+*.tsbuildinfo
+.pnp
+.pnp.js
+.npm
+.eslintcache
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Go  (lobstertrap/)
+# ──────────────────────────────────────────────────────────────────────────────
+# lobstertrap is a SEPARATE third-party repo (github.com/veeainc/lobstertrap)
+# with its own git history. It is not part of this repository — clone it
+# alongside, per the README. Excluded here in full:
+lobstertrap/
+# Generic Go build artifacts:
+*.exe
+*.test
+*.out
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Misc
+# ──────────────────────────────────────────────────────────────────────────────
+tmp/
+temp/
+*.bak

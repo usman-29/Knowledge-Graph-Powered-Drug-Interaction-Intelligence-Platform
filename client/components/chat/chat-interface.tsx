@@ -1,0 +1,265 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Send, ShieldCheck, User, Bot, UserCircle } from "lucide-react";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Markdown } from "@/components/chat/markdown";
+import { cn } from "@/lib/utils";
+import type { Patient } from "@/lib/backend";
+
+type Message =
+  | { role: "user"; content: string; timestamp: number }
+  | { role: "assistant"; content: string; blocked: boolean; blockReason: string | null; traceId: string; timestamp: number };
+
+const GENERIC_SAMPLES = [
+  "What are the interactions between warfarin and aspirin?",
+  "What's the FDA black-box warning for clozapine?",
+  "Is it safe to combine ibuprofen with lisinopril?",
+];
+
+const PATIENT_SAMPLES = [
+  "Can I add ibuprofen for joint pain?",
+  "Are any of the current medications contraindicated together?",
+  "What FDA warnings apply to the current regimen?",
+];
+
+type Props = {
+  userName: string;
+  patient?: Patient | null;
+};
+
+export function ChatInterface({ userName, patient }: Props) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [pending, setPending] = useState(false);
+  const [threadId] = useState(() => crypto.randomUUID());
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const samples = patient ? PATIENT_SAMPLES : GENERIC_SAMPLES;
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, pending]);
+
+  // Reset messages when patient changes — each scope has its own conversation.
+  useEffect(() => {
+    setMessages([]);
+  }, [patient?.id]);
+
+  async function send(query: string) {
+    const text = query.trim();
+    if (!text || pending) return;
+    setInput("");
+    setMessages((m) => [...m, { role: "user", content: text, timestamp: Date.now() }]);
+    setPending(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: text,
+          thread_id: threadId,
+          patient_id: patient?.id,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = (await res.json()) as {
+        answer: string;
+        blocked: boolean;
+        block_reason: string | null;
+        trace_id: string;
+      };
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: data.answer,
+          blocked: data.blocked,
+          blockReason: data.block_reason,
+          traceId: data.trace_id,
+          timestamp: Date.now(),
+        },
+      ]);
+    } catch (err) {
+      toast.error("Request failed", { description: String(err) });
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: "**Request failed.** Please verify the backend server is running and try again.",
+          blocked: true,
+          blockReason: String(err),
+          traceId: "",
+          timestamp: Date.now(),
+        },
+      ]);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      {patient ? <PatientContextBanner patient={patient} /> : null}
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="mx-auto max-w-3xl space-y-6">
+          {messages.length === 0 ? <EmptyState onPick={send} patient={patient} samples={samples} /> : null}
+          {messages.map((msg, i) => (
+            <MessageRow key={i} msg={msg} userName={userName} />
+          ))}
+          {pending ? <PendingRow /> : null}
+        </div>
+      </div>
+
+      <div className="border-t bg-card">
+        <div className="mx-auto max-w-3xl px-6 py-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              send(input);
+            }}
+            className="flex gap-2"
+          >
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={
+                patient
+                  ? `Ask about ${patient.display_name}'s medications…`
+                  : "Ask about a drug interaction, dosing, or safety warning…"
+              }
+              disabled={pending}
+              className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+            />
+            <Button type="submit" disabled={!input.trim() || pending} size="icon">
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Responses are generated by an AI and must not replace clinical judgement. Every query is logged for compliance.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PatientContextBanner({ patient }: { patient: Patient }) {
+  return (
+    <div className="border-b bg-muted/40 px-6 py-2 text-xs">
+      <div className="mx-auto flex max-w-3xl items-center gap-3">
+        <UserCircle className="h-4 w-4 text-muted-foreground" />
+        <span className="font-medium">{patient.display_name}</span>
+        <span className="text-muted-foreground">
+          {patient.age}{patient.sex} ·{" "}
+          {patient.medications.map((m) => m.name).join(", ") || "no current medications"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({
+  onPick,
+  patient,
+  samples,
+}: {
+  onPick: (q: string) => void;
+  patient?: Patient | null;
+  samples: string[];
+}) {
+  return (
+    <Card className="border-dashed p-6">
+      <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
+        <ShieldCheck className="h-4 w-4" />
+        {patient ? `Drug-Safety Review · ${patient.display_name}` : "Drug-Safety Assistant"}
+      </div>
+      <p className="mb-4 text-sm text-muted-foreground">
+        {patient
+          ? `Queries are auto-scoped to ${patient.display_name}'s current medications, allergies, and conditions. Ask any clinical question — the assistant reviews the patient's regimen for interactions and safety concerns.`
+          : "Ask about drug interactions, dosing, or safety warnings. Every response is grounded in our verified clinical knowledge base and reviewed by safety checks before reaching you."}
+      </p>
+      <div className="space-y-1.5">
+        <div className="text-xs font-medium text-muted-foreground">Try one:</div>
+        {samples.map((q) => (
+          <button
+            key={q}
+            onClick={() => onPick(q)}
+            className="block w-full rounded-md border border-border px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function MessageRow({ msg, userName }: { msg: Message; userName: string }) {
+  if (msg.role === "user") {
+    return (
+      <div className="flex gap-3">
+        <Avatar>
+          <AvatarFallback>
+            <User className="h-4 w-4" />
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="mb-1 text-xs font-medium text-muted-foreground">{userName}</div>
+          <Card className="bg-muted/50 p-3 text-sm whitespace-pre-wrap">{msg.content}</Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-3">
+      <Avatar>
+        <AvatarFallback>
+          <Bot className="h-4 w-4" />
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <span>Assistant</span>
+          {msg.blocked ? (
+            <Badge variant="destructive" className="gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Blocked
+            </Badge>
+          ) : (
+            <Badge variant="success">Verified</Badge>
+          )}
+          {msg.traceId ? <code className="text-[10px] opacity-60">trace: {msg.traceId.slice(0, 8)}</code> : null}
+        </div>
+        <Card className={cn("p-4", msg.blocked && "border-destructive/40")}>
+          <Markdown>{msg.content}</Markdown>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function PendingRow() {
+  return (
+    <div className="flex gap-3">
+      <Avatar>
+        <AvatarFallback>
+          <Bot className="h-4 w-4" />
+        </AvatarFallback>
+      </Avatar>
+      <Card className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+        <div className="flex gap-1">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground/60" />
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground/60 [animation-delay:150ms]" />
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground/60 [animation-delay:300ms]" />
+        </div>
+        Running safety pipeline…
+      </Card>
+    </div>
+  );
+}

@@ -1,0 +1,209 @@
+# Lobster Trap Policy — Clinical Drug-Safety Agent
+# HIPAA / SOC2 aligned. First-match-wins (higher priority number = evaluated first).
+#
+# Traffic flow:
+#   App → localhost:8080 (Lobster Trap) → HuggingFace API
+#
+# Every request from our app includes:
+#   "_lobstertrap": { "declared_intent": "<intent>", "agent_id": "..." }
+#
+# Declared intents used by this system:
+#   medical_drug_safety  — medical agent querying drug interactions
+#   intent_check         — orchestrator classifying the user query
+#   safety_judge         — input/output guardrail LLM judges
+
+version: "1.0"
+policy_name: clinical-agent-hipaa
+default_action: ALLOW  # block specific bad patterns; everything else passes through
+
+# ── INGRESS: Request filtering ─────────────────────────────────────────────────
+
+ingress_rules:
+
+  # ── Trusted internal intents ────────────────────────────────────────────────
+  # These three intents are issued by our own server AFTER the application-side
+  # input_guardrail (regex PII + LLM judge) has already screened the user text.
+  # The system only ever uses synthetic patient IDs (Patient-001 etc.), so
+  # Lobster's PII heuristic produces false positives on legitimate clinical
+  # phrasing like "the patient" or "him". Allow these through; real PII is
+  # caught upstream by patterns.py and downstream by egress rules.
+
+  - name: allow_internal_intent_check
+    description: Orchestrator's intent classifier — runs after input guardrail.
+    priority: 120
+    action: ALLOW
+    conditions:
+      - field: declared_intent
+        match_type: exact
+        value: intent_check
+
+  - name: allow_safety_judge
+    description: >
+      The safety-judge guardrail sends prompts that describe (but do not execute)
+      injection and jailbreak patterns — this is by design.
+    priority: 115
+    action: ALLOW
+    conditions:
+      - field: declared_intent
+        match_type: exact
+        value: safety_judge
+
+  - name: allow_internal_medical_agent
+    description: >
+      Medical agent processes patient context (synthetic IDs only) to look up
+      drug interactions. Runs after input guardrail; real PII would be blocked
+      upstream by patterns.py.
+    priority: 110
+    action: ALLOW
+    conditions:
+      - field: declared_intent
+        match_type: exact
+        value: medical_drug_safety
+
+  - name: block_prompt_injection
+    description: Catch prompt injection before it reaches the LLM.
+    priority: 100
+    action: DENY
+    deny_message: "[LOBSTER TRAP] Blocked: prompt injection detected."
+    conditions:
+      - field: contains_injection_patterns
+        match_type: boolean
+        value: true
+
+  - name: block_pii_in_prompt
+    description: No patient PII may enter the LLM — HIPAA compliance.
+    priority: 98
+    action: DENY
+    deny_message: "[LOBSTER TRAP] Blocked: PII detected in request."
+    conditions:
+      - field: contains_pii_request
+        match_type: boolean
+        value: true
+
+  - name: block_harmful_content
+    priority: 97
+    action: DENY
+    deny_message: "[LOBSTER TRAP] Blocked: harmful content."
+    conditions:
+      - field: contains_harm_patterns
+        match_type: boolean
+        value: true
+
+  - name: block_data_exfiltration
+    description: Stop attempts to extract drug graph data in bulk.
+    priority: 95
+    action: DENY
+    deny_message: "[LOBSTER TRAP] Blocked: data exfiltration pattern."
+    conditions:
+      - field: contains_exfiltration
+        match_type: boolean
+        value: true
+
+  - name: block_obfuscation
+    description: Encoding tricks used to smuggle injections past regex filters.
+    priority: 93
+    action: DENY
+    deny_message: "[LOBSTER TRAP] Blocked: obfuscated input."
+    conditions:
+      - field: contains_obfuscation
+        match_type: boolean
+        value: true
+
+  - name: block_malware_requests
+    priority: 91
+    action: DENY
+    deny_message: "[LOBSTER TRAP] Blocked: malware/exploit generation request."
+    conditions:
+      - field: contains_malware_request
+        match_type: boolean
+        value: true
+
+  - name: block_system_commands
+    priority: 89
+    action: DENY
+    deny_message: "[LOBSTER TRAP] Blocked: dangerous system command."
+    conditions:
+      - field: contains_system_commands
+        match_type: boolean
+        value: true
+
+  - name: block_sensitive_paths
+    priority: 88
+    action: DENY
+    deny_message: "[LOBSTER TRAP] Blocked: sensitive path access."
+    conditions:
+      - field: contains_sensitive_paths
+        match_type: boolean
+        value: true
+
+  - name: human_review_role_impersonation
+    description: >
+      Role impersonation (pretend you are a doctor with no restrictions) is a
+      jailbreak vector. Escalate for human review rather than hard-blocking so
+      edge cases can be inspected.
+    priority: 85
+    action: HUMAN_REVIEW
+    conditions:
+      - field: contains_role_impersonation
+        match_type: boolean
+        value: true
+
+  - name: human_review_high_risk
+    description: High risk score on any request — flag for human review.
+    priority: 75
+    action: HUMAN_REVIEW
+    conditions:
+      - field: risk_score
+        match_type: threshold
+        value: 0.6
+
+  # default_action: ALLOW handles all legitimate traffic.
+  # Add explicit ALLOW rules here only if you need to log specific categories.
+
+# ── EGRESS: Response filtering ─────────────────────────────────────────────────
+
+egress_rules:
+
+  - name: block_credential_leak_in_response
+    description: LLM must never echo back API keys, tokens, or passwords.
+    priority: 100
+    action: DENY
+    deny_message: "[LOBSTER TRAP] Blocked: credentials detected in response."
+    conditions:
+      - field: contains_credentials
+        match_type: boolean
+        value: true
+
+  - name: block_pii_in_response
+    description: HIPAA egress control — no PII in LLM output.
+    priority: 98
+    action: QUARANTINE
+    conditions:
+      - field: contains_pii
+        match_type: boolean
+        value: true
+
+# ── Rate limiting ──────────────────────────────────────────────────────────────
+
+rate_limits:
+  requests_per_minute: 30
+  requests_per_hour: 500
+  burst_threshold: 10
+
+network:
+  egress_policy: allowlist
+  allowed_domains:
+    - "router.huggingface.co"
+    - "api-inference.huggingface.co"
+  denied_domains:
+    - "*.onion"
+    - "pastebin.com"
+
+filesystem:
+  denied_paths:
+    - "/etc/**"
+    - "/root/**"
+    - "**/.ssh/**"
+    - "**/.env"
+    - "**/*secret*"
+    - "**/*password*"

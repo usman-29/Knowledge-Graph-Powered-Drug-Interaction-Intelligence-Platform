@@ -1,0 +1,80 @@
+[
+  {
+    "id": "P-001",
+    "display_name": "John Carter",
+    "age": 72,
+    "sex": "M",
+    "conditions": ["Atrial fibrillation", "Type 2 diabetes", "Hypertension"],
+    "allergies": ["Penicillin", "Shellfish"],
+    "medications": [
+      { "name": "Warfarin", "dose": "5 mg", "frequency": "once daily", "indication": "Stroke prevention (AFib)" },
+      { "name": "Metformin", "dose": "1000 mg", "frequency": "twice daily", "indication": "Type 2 diabetes" },
+      { "name": "Lisinopril", "dose": "20 mg", "frequency": "once daily", "indication": "Hypertension" }
+    ]
+  },
+  {
+    "id": "P-002",
+    "display_name": "Sarah Mitchell",
+    "age": 58,
+    "sex": "F",
+    "conditions": ["Major depressive disorder", "Migraine", "Mild osteoarthritis"],
+    "allergies": ["Codeine", "Latex"],
+    "medications": [
+      { "name": "Sertraline", "dose": "100 mg", "frequency": "once daily", "indication": "Depression" },
+      { "name": "Sumatriptan", "dose": "50 mg", "frequency": "as needed", "indication": "Migraine" },
+      { "name": "Acetaminophen", "dose": "500 mg", "frequency": "as needed", "indication": "Joint pain" }
+    ]
+  },
+  {
+    "id": "P-003",
+    "display_name": "Michael Chen",
+    "age": 45,
+    "sex": "M",
+    "conditions": ["GERD", "Chronic back pain", "Anxiety"],
+    "allergies": ["Sulfa drugs"],
+    "medications": [
+      { "name": "Omeprazole", "dose": "20 mg", "frequency": "once daily", "indication": "GERD" },
+      { "name": "Ibuprofen", "dose": "400 mg", "frequency": "as needed", "indication": "Back pain" },
+      { "name": "Buspirone", "dose": "10 mg", "frequency": "twice daily", "indication": "Anxiety" }
+    ]
+  },
+  {
+    "id": "P-004",
+    "display_name": "Eleanor Hayes",
+    "age": 67,
+    "sex": "F",
+    "conditions": ["Schizophrenia", "Hyperlipidemia", "Insomnia"],
+    "allergies": ["Haloperidol", "Adhesive tape"],
+    "medications": [
+      { "name": "Clozapine", "dose": "300 mg", "frequency": "once daily", "indication": "Schizophrenia" },
+      { "name": "Atorvastatin", "dose": "40 mg", "frequency": "once daily", "indication": "Hyperlipidemia" },
+      { "name": "Melatonin", "dose": "3 mg", "frequency": "at bedtime", "indication": "Insomnia" }
+    ]
+  },
+  {
+    "id": "P-005",
+    "display_name": "Aisha Patel",
+    "age": 34,
+    "sex": "F",
+    "conditions": ["Epilepsy", "Vitamin D deficiency"],
+    "allergies": ["Phenytoin", "Bee stings"],
+    "medications": [
+      { "name": "Lamotrigine", "dose": "200 mg", "frequency": "twice daily", "indication": "Epilepsy" },
+      { "name": "Cholecalciferol", "dose": "2000 IU", "frequency": "once daily", "indication": "Vitamin D supplementation" }
+    ]
+  },
+  {
+    "id": "P-006",
+    "display_name": "Robert Sullivan",
+    "age": 81,
+    "sex": "M",
+    "conditions": ["Heart failure", "Chronic kidney disease", "Anemia"],
+    "allergies": ["Aspirin", "Iodine contrast"],
+    "medications": [
+      { "name": "Furosemide", "dose": "40 mg", "frequency": "once daily", "indication": "Heart failure (fluid management)" },
+      { "name": "Digoxin", "dose": "0.125 mg", "frequency": "once daily", "indication": "Heart failure" },
+      { "name": "Potassium chloride", "dose": "20 mEq", "frequency": "once daily", "indication": "Hypokalemia prevention" },
+      { "name": "Ferrous sulfate", "dose": "325 mg", "frequency": "once daily", "indication": "Iron-deficiency anemia" }
+    ]
+  }
+]

@@ -274,7 +274,3 @@ The backend suite covers guardrails, RBAC, the risk engine, and red-team adversa
 This is a **research and demonstration project**, not a certified medical device or clinical decision-support system. All patient data is synthetic. Drug-safety output may be incomplete or wrong. **Never** use it to make real medical decisions. Always consult a qualified healthcare professional and authoritative drug references.
 
 ---
-
-## 📄 License
-
-No license file is currently included — add one (e.g. MIT) before publishing if you intend others to reuse the code. The `lobstertrap` component is MIT-licensed (see [`lobstertrap/README.md`](lobstertrap/README.md)).

@@ -1,12 +1,37 @@
 # 🩺 Autonomous Clinical Discharge & Care-Plan Orchestrator
 
-> A **medical-grade conversational AI agent** for drug-safety verification, built around a defense-in-depth security architecture for regulated (HIPAA-style) environments.
+> A **medical-grade conversational AI agent** that checks **drug-to-drug interactions** and medication safety against a patient's existing regimen — built on a defense-in-depth security architecture for regulated (HIPAA-style) environments.
 
-This project answers a single hard question — *"Is this combination of medications safe for this patient?"* — and does so the way a regulated clinical system has to: every answer is **guarded, access-controlled, intent-routed, deterministically risk-scored, fact-checked against evidence, and audited**.
+The core question it answers is the one a clinician asks before writing a new prescription:
+
+> *"Patient A is already on Warfarin, Metformin and Lisinopril — is it safe to add Aspirin?"*
+
+It answers the way a regulated clinical system has to: every response is **guarded, access-controlled, intent-routed, checked against a drug-interaction knowledge graph, deterministically risk-scored, fact-checked against evidence, and audited**.
 
 It is a research/hackathon-grade reference implementation of **safe agentic AI**: guardrails, observability, RBAC, explainability, and red-team resistance applied to a healthcare use case.
 
 > ⚠️ **Not a medical device.** For research and demonstration only. All patient data is **synthetic**. Do not use for real clinical decision-making.
+
+---
+
+## 💊 What it does
+
+Pick a (synthetic) patient, then ask whether a new or existing medication is safe. The agent:
+
+1. **Reads the patient's current regimen** — medications, conditions, and allergies are injected into the agent's state (no free-text parsing).
+2. **Normalizes every drug** to its RxNorm RxCUI via the knowledge graph (so "Aspirin", "ASA", and brand names resolve to one identity).
+3. **Checks each `(new_drug, existing_medication)` pair** for a recorded interaction in the Neo4j drug-interaction graph — preserving direction (which drug is the *perpetrator* vs. the *victim* of the mechanism).
+4. **Cross-references openFDA** for the official boxed (black-box) warning.
+5. **Runs the deterministic risk engine** — drug-drug, drug-disease, allergy, geriatric (Beers), organ-dysfunction and drug-class rules — to assign a final severity the LLM cannot soften.
+6. **Returns a grounded, severity-graded answer** with the evidence it used, after a fact-check and output guardrail.
+
+**Example**
+
+> **You:** *"This patient is on warfarin. Can I add aspirin for cardiac protection?"*
+>
+> **Agent:** *🔴 **RED — High-risk interaction.** Warfarin + Aspirin: additive bleeding risk (Aspirin inhibits platelet aggregation while Warfarin impairs clotting-factor synthesis). FDA boxed warning on file for Warfarin (major/fatal bleeding). Co-prescription requires explicit specialist review and INR monitoring. — grounded in: Knowledge-Graph interaction edge, openFDA boxed warning.*
+
+The three drug tools the agent is allowed to call are `resolve_rxcui`, `check_interaction_pair` (for a specific new-vs-existing pair) and `check_local_interactions` (all interactions for one drug), plus `get_fda_blackbox_warning`.
 
 ---
 

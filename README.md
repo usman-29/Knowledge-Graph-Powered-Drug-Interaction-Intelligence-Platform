@@ -1,4 +1,4 @@
-# 🩺 Autonomous Clinical Discharge & Care-Plan Orchestrator
+# 🩺 Knowledge-Graph Powered Drug Interaction Intelligence Platform
 
 > A **medical-grade conversational AI agent** that checks **drug-to-drug interactions** and medication safety against a patient's existing regimen — built on a defense-in-depth security architecture for regulated (HIPAA-style) environments.
 
